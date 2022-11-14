@@ -1,245 +1,224 @@
 # Exercise 4
 
-## Objectives :full_moon_with_face: 
-- Build your own R packages
-- Create and develop an interactive Shiny web-application
-- All members of the group must commit at least once.
-- All commit messages must be reasonably clear and meaningful.
-- Your GitHub repository must include at least one issue containing some form of TO DO list.
-- Follow package development good practices, namely :
-  - Document every function;
-  - Add examples with functions;
-  - Create tests with `testthat`;
-  - Verify that the package passes all the checks;
-  - Create a vignette for explaining the package;
-  - Add Github actions for automated checks;
-  - Create a website with `pkgdown`.
+As the Homework was written as a guided tutorial to creating a package and a Shiny app, we will simply post here the final code that corresponds to the detailed steps in the Homework questions. 
 
-You can follow [The tidy verse style guide](https://style.tidyverse.org/package-files.html) for inspiration.
+## Main script
 
-## Content :rocket: 
-#### Problem 1: modify `find_area` from Exercise #3
+For the `area.R` file: 
 
-In this problem we simplify the `find_area` function in order to have two separated functions for simulation and visualization (plotting) of simulated results. A nicely designed function should do one coherent action at a time. Further, the name of a function should be self-explanatory, that is, a user should be able to guess what function does by its name.
-
-- **(a)** The function `find_area` should do exactly one action, that is estimate the area $\text{area}(S)$. Therefore, we need to introduce the following modifications:
-
-    - Rename `find_area` to `estimate_area`
-    - Remove `make_plot` argument and the code chunk to plot the chart
-
-    The function `estimate_area` should return both the estimated value of $\text{area}(S)$ and simulated points. The simulated points will be used for plotting afterwards. Therefore, it makes sense to store them in a data frame with three columns: `x`, `y`, and a logical column `inside` (`TRUE` if a point lies inside the shape $S$, and `FALSE` otherwise).
-
-    As long as we need to return two objects, we keep them as elements of a list. Also, using S3 methodology, we assign a class `area` to this list (to dispatch a `plot` method).
-
-  Incorporating these modifications, the function will look as follows:
-
-  ```{r}
-  estimate_area <- function(B = 5000, seed = 10) {
-
-      # set a seed
-      set.seed(seed)
-
-      # simulate B points
-      points <- data.frame(
-          x = runif(n = B, min = 0, max = 1),
-          y = runif(n = B, min = 0, max = 1),
-          inside = rep(NA, B)
-      )
-
-      # your loop goes here
-      # ...
-
-      # create a structure
-      rval <- structure(
+```{r}
+make_circle = function(col = "darkblue", fill = NULL, lty = 1) {
+  phi <- seq(from = pi/2, to = 0, length.out = 201)
+  f1_points <- cbind(.5 * cos(phi), .5 * sin(phi))
+  
+  phi <- seq(from = 0, to = pi, length.out = 101)
+  f2_points <- cbind(.5 + .5 * cos(phi), .5 + .5 * sin(phi))
+  
+  x <- seq(from = .5, to = 1, length.out = 101)
+  f3_points <- cbind(x, x - .5)
+  
+  coords = rbind(f2_points, f1_points, f3_points)
+  
+  lines(coords, col = col, lty = lty)
+  if (!is.null(fill)){
+    polygon(c(coords[,1]), c(coords[,2]), col = fill, border = NULL)
+  }
+}
+make_square = function(bottom_left = c(0,0), side = 1, col = "darkblue", fill = NULL){
+  lines(c(bottom_left, bottom_left), c(bottom_left + side, bottom_left), col = col)
+  lines(c(bottom_left + side, bottom_left), c(bottom_left + side, bottom_left + side), col = col)
+  lines(c(bottom_left + side, bottom_left + side), c(bottom_left, bottom_left + side), col = col)
+  lines(c(bottom_left, bottom_left + side), c(bottom_left, bottom_left), col = col)
+  if (!is.null(fill)){
+    polygon(c(bottom_left, bottom_left+side, bottom_left+side, bottom_left), c(bottom_left, bottom_left, bottom_left+side, bottom_left+side), border = NULL, col = fill)
+  }
+}
+inside_region <- function(x, ind = NULL) {
+  if (is.null(ind)) {
+    stop("Index should be supplied to calculate the are border.")
+  }
+  
+  if (ind == 1) {
+    I <- x[1]^2 + x[2]^2 > .5^2
+  } else if (ind == 2) {
+    I <- (x[1] - .5)^2 + (x[2] - .5)^2 < .5^2
+  } else if (ind == 3) {
+    I <- x[2] > x[1] - .5
+  }
+  
+  return(I)
+}
+inside_shape = function(x){
+  if (inside_region(x, 1) && inside_region(x, 2) && inside_region(x, 3)) {
+    return(1)
+  } else {
+    return(0)
+  }
+}
+#' @title Estimation of the area of the shape
+#' @description Provide an estimation of the area value using simple probabilities
+#' @param \code{B} the number of points on which the estimation of pi is produced.
+#' @param \code{seed} the seed to be used for the random generation used in the procedure
+#' @return A \code{list} of the `area` class made of the estimated value of the area and the points on which this estimation is based. In particular:
+#' \describe{
+#'     \item{estimated_area}{The estimated value of the area}
+#'     \item{points}{A data frame with the points in the unit square on which the estimation is based and a dummy indicating whether the particular point is inside the shape or not.}
+#' }
+#' @importFrom stats runif
+#' @export
+#' @examples
+#' find_area(B=5000, seed=10)
+find_area = function(B = 5000, seed = 10) {
+  # Control of the arguments
+  if(B%%1 != 0 | B <= 0){
+    stop("Argument B is invalid. Please specify a positive integer for this parameter.")
+  }
+  if(seed%%1 != 0 | seed <= 0){
+    stop("seed argument is invalid. Please specify a positive integer for this parameter.")
+  }
+  # Control seed
+  set.seed(seed)
+  # Simulate B points
+  points = data.frame(
+    x = runif(n = B, min = 0, max = 1),
+    y = runif(n = B, min = 0, max = 1),
+    inside = rep(NA, B)
+  )
+  
+  # Compute the number of points inside unit circle
+  for(i in 1:B){
+    points$inside[i] <- ifelse(inside_shape(cbind(points$x[i], points$y[i])) == TRUE, 1, 0)
+  }
+  area_hat = sum(points$inside)/B
+  # create a new list
+  rval <- structure(
           list(
-            estimated_area = estimated_area,
+            estimated_area = area_hat,
             points = points),
           class = "area"
       )
-
-      # return rval
-      return(rval)
-
+  # return rval
+  return(rval)
+}
+#' @title Plotting of the points serving in the estimation of the area
+#'
+#' @description Plotting procedure for an object of the `area` class.
+#' @param x an object of `area` class containing the points that serve to the estimation of the area value.
+#' @return A plot of the unit square and the shape emphasising the points used in the estimation.
+#' @importFrom stats runif
+#' @importFrom graphics grid lines polygon
+#' @importFrom grDevices hcl
+#' @export
+#' @examples plot(x)
+plot.area <- function(x){
+  #Control of the argument
+  if(class(x) != "area"){
+    stop("Specify an argument of the area class for this function. ")
   }
-  ```
-- **(b)** The function `estimate_area` will be made available to users. What if a `user` inputs a string of characters? A matrix? Add controls (`stop`, `warning`, `message`, ...) to the function so it behaves and is constrained to behave exactly in the way it is supposed to.
-
-- **(c)** Now, we can initialize the function to visualize our simulation. The function should take a returned value of `estimate_area` as the argument, and produce a plot based on `points` element of such object:
-
-  ```{r}
-  plot.area <- function(x) {
-
-      points <- x[["points"]]
-
-      # plot points
-
+  points <- x[["points"]]
+  B <- nrow(points)
+  plot(NA, xlim = c(-.1, 1.1), ylim = c(-.1, 1.1), xlab = "x", ylab = "y")
+  make_square()
+  cols = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 0.2)[1:2]
+  grid()
+  for (i in 1:B){
+    points(points[i,1], points[i,2], pch = 16, col = cols[1 + points[i, 3]])
   }
-  ```
+  make_circle()
+}
+```
 
-  Note that this function returns nothing, but plots a chart. To call this function you can simply use `plot(x)`, where `x` is a result of the function `estimate_area`.
+## User interface
 
-#### Problem 2: build an R package
+For the `ui.R` file: 
 
-For this problem, we simply wrap these functions into a package:
-
-- Create a package `pkghw4gN` (where `N` is your group number) in RStudio: File -> New Project... -> New Directory -> R Package.
-
-- Create a new GitHub repo `pkghw4gN` (where `N` is your group number) and synchronize it with your "initial" package.
-
-- Copy the function `estimate_area()` and `plot.area()` from the previous problem into file `area.R` in `R/` folder. Commit.
-
-- Document the function `estimate_area` and `plot.area` using `roxygen2` comments. Use `devtools::document()` to generate help files afterwards. Do not forget to specify `@export` in `roxygen2` comments to export functions into `NAMESPACE` (make it visible outside the package). You should at least have the following tags: `@title`, `@authors`, `@params`, `@return`, `@examples` (or `@example`). Commit.
-
-- Fill in the `DESCRIPTION` file as much as possible. Commit.
-
-- Clean up the auto-generated file `hello.R` and `hello.Rd`, from `R/` and `man/`, respectively. Commit.
-
-- Remove `NAMESPACE` file, since it was not auto-generated by `roxygen2` (and, therefore, prevents `roxygen2` to overwrite `NAMESPACE`). Then, evoke the command `devtools::document()` to generate it. Commit.
-
-At the end of each step, please, do not forget to commit with a meaningful message.
-
-Note that if you use `ggplot2`, you have to specify it in `DESCRIPTION` file in the `Imports` section. To use the function from `ggplot2` you have to specify its namespace. That is, use `ggplot2::ggplot()` instead of `ggplot()`.
-
-You can also check yourself at this step, if everything works well. You need to `Install and Restart` (in `Build` tab) and try to run `estimate_area()`, as well as look at the help file by `?estimate_area`.
-
-- Add automatic tests with `testthat`. You should at least have one test per function. For example, make sure that you obtain a given error when a "wrong" input is provided. 
-
-- Correct every errors, warnings and notes obtained from `devtools::check()` (or equivalently clicking on `Check`).
-
-- Add Github action to make automatic checks for at least Windows, MAC and Ubuntu OS.
-
-- **Bonus**: add Fedora to the list of OS.
-
-#### Problem 3: Shiny App
-
-Now we compliment the package with a Shiny app, so that a user can have an interactive interface to play around with the functionality of the package. The core function of the package, `estimate_area`, has two inputs: the argument `seed` and the number of simulations `B`. We want to allow the user to choose the values of both, as well as select the function that will produce simulations. The result of the app should be the estimated value of $\text{area}(S)$, the time spent on simulations, and finally, the plot of points in/out of the circle. Therefore, the interface should have:
-
-- A side bar of the following elements:
-  - A numeric input of the seed
-  - A slider for a number of simulations that goes from `1` to `1000000`
-
-- A main panel of the following elements:
-  - A plot
-  - A text with the value of estimated $\text{area}(S)$
-  - A text with the time of the execution (use function `system.time` to measure)
-
-Below a step-by-step instruction is presented:
-
-- Add `shiny` package in `DESCRIPTION` file into the section `Imports`:
-
-  ```{r}
-  ...
-  Imports: shiny (>= 1.7.1)
-  ...
-  ```
-- Create a folder `inst/shiny-examples` in a package directory (i.e., `inst` folder at top level, and `shiny-examples` inside `inst`).
-
-- Click File -> New File -> Shiny Web App. Call the app as `area`, select "Application type:" being "Multiple File (ui.R/server.R)", and then navigate "Create within directory:" to newly created `shiny-examples`. Commit.
-
-- Modify `ui.R` according to the mentioned above specification. The file would look like:
-
-
-  ```{r}
-  library(shiny)
-
-  shinyUI(fluidPage(
-
-      titlePanel("Area Estimation"),
-
-      sidebarLayout(
-
-          sidebarPanel(
-
-              numericInput("seed", ...),
-
-              sliderInput("B", ...)
-
-          ),
-
-          mainPanel(
-
+```{toml}
+library(shiny)
+shinyUI(fluidPage(
+    titlePanel("Area Estimation"),
+    sidebarLayout(
+        sidebarPanel(
+            numericInput("seed", "Enter the desired seed:", min=1, max=10^6, value=1),
+            sliderInput("B", "Enter the number of simulations", min=1, max=1000000, value=100)
+        ),
+        mainPanel(
             plotOutput("plot"),
-
             textOutput("time"),
-
             textOutput("area")
-          )
-      )
-    ))
-  ```
+        )
+    )
+))
+```
 
-  where `"seed"`, `"B"` are `inputID`'s; and `"plot"`, `"time"`, and `"area"` are `outputId`'s. Insert your code instead of `...`.
+## Server
 
-  Hint: see help `?numericInput`, and `?sliderInput` to figure out what should replace `...`.
+For the `server.R` file: 
 
-- Modify `server.R`. Here we need to define a reactive expression (`simulate` in the chunk below), which will be executed whenever widgets are changed. This reactive depends on the values from `input` list with `inputID` elements (i.e., `"seed"`).
+```{toml}
+library(shiny)
+library(pkghw4gN) # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
+shinyServer(function(input, output) {
+simulate <- reactive({
+    #simulate the area of S and measure the time here
+    find_area(B = input$B, seed=input$seed)
+})
+   output$plot <- renderPlot({
+       # plot shape
+      plot(simulate())
+   })
+   output$time <- renderText({
+      #extract the time of the execution
+      options(digits.secs=6)
+      start.time <- Sys.time()
+      simulate()
+      end.time <- Sys.time()
+      time <- end.time-start.time
+      paste("Execution time is:", time)
+    })
+   output$area <- renderText({
+      # extract the estimated value
+      pival <- simulate()$estimated_area
+      paste("Estimated area is:", pival)
+    })
+})
+```
 
-  The `output` defines what will be rendered, therefore, the `server.R` file is as follows:
+## Demo
 
-  ```{r}
-  library(shiny)
-  library(pkghw4gN) # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
+For the `runDemo.R` file: 
 
-  shinyServer(function(input, output) {
-
-      simulate <- reactive({
-          # simulate the area of S and measure the time here
-          ...
-      })
-
-      output$plot <- renderPlot({
-          # plot area
-          ...
-      })
-
-      output$time <- renderText({
-          # extract the time of the execution
-          ...
-      })
-
-      output$area <- renderText({
-          # extract the estimated value
-          ...
-      })
-
-  })
-  ```
-
-  Do not forget to change N to the number of your group.
-
-  Commit your changes.
-
-- Add a file `runDemo.R` containing the following snippet:
-
-  ```{r}
-  #' @export
-  runDemo <- function() {
-      # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
-      appDir <- system.file("shiny-examples", "area", package = "pkghw4gN")
-      if (appDir == "") {
-          stop(
-              # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
-              "Could not find example directory. Try re-installing pkghw4gN.",
-              call. = FALSE
-          )
-      }
-
-      shiny::runApp(appDir, display.mode = "normal")
-
+```{toml}
+#' @export
+runDemo <- function() {
+  # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
+  appDir <- system.file("shiny-examples", "area", package = "pkghw4gN")
+  if (appDir == "") {
+    stop(
+      "Could not find example directory. Try re-installing pkghw4gN.",
+      call. = FALSE
+    )
   }
-  ```
+  shiny::runApp(appDir, display.mode = "normal")
+}
+```
 
-  Do not forget to change N to the number of your group.
+## Documentation
 
-  Add documentation to this function using `roxygen2` comments (as in Problem 1) and `devtools::document()`. Commit.
-  
-#### Problem 4: Pkgdown and vignette
-* Create a vignette showcasing the package and how to use the Shiny app.
-* Create a website with `pkgdown`.
-* Build it and create Github action.
-* Customize the `pkgdown` website: add a logo and favicon.
-* **Bonus**: use the `preferably` template for `pkgdown` (<https://preferably.amirmasoudabdol.name/>)
-* **Bonus**: host the Shiny app on a server (e.g. <https://www.shinyapps.io>) and embed the Shiny app in an article for the `pkgdown` website (see [here](https://pkgdown.r-lib.org/reference/build_articles.html#embedding-shiny-apps)).
+For the `DESCRIPTION` file: 
 
-Phew! What a relief! 
+```{toml}
+Package: pkghw4gN
+Type: Package
+Title: Estimate area of the shape
+Version: 0.1.0
+Author: Surname Name
+Maintainer: Surname Name <XXXXXX@emailadress.com>
+Description: Functions to numerically estimate the area of the shape.
+License: GPL (>= 2)
+Encoding: UTF-8
+RoxygenNote: 7.1.1
+Imports: shiny (>= 1.4.0)
+```
+
+The other files are automatically generated and updated when using the `devtools::document()` command. 
 
