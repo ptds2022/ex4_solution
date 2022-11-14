@@ -222,6 +222,8 @@ Description: Functions to numerically estimate the area of the shape.
 License: GPL (>= 2)
 Encoding: UTF-8
 RoxygenNote: 7.2.1
+LazyData: true
+Imports: shiny (>= 1.7.1)
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
