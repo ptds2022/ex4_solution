@@ -56,9 +56,10 @@ inside_shape = function(x){
   }
 }
 #' @title Estimation of the area of the shape
+#' @author AlexShem
 #' @description Provide an estimation of the area value using simple probabilities
-#' @param \code{B} the number of points on which the estimation of pi is produced.
-#' @param \code{seed} the seed to be used for the random generation used in the procedure
+#' @param B the number of points on which the estimation of pi is produced.
+#' @param seed the seed to be used for the random generation used in the procedure
 #' @return A \code{list} of the `area` class made of the estimated value of the area and the points on which this estimation is based. In particular:
 #' \describe{
 #'     \item{estimated_area}{The estimated value of the area}
@@ -67,8 +68,8 @@ inside_shape = function(x){
 #' @importFrom stats runif
 #' @export
 #' @examples
-#' find_area(B=5000, seed=10)
-find_area = function(B = 5000, seed = 10) {
+#' estimate_area(B=5000, seed=10)
+estimate_area = function(B = 5000, seed = 10) {
   # Control of the arguments
   if(B%%1 != 0 | B <= 0){
     stop("Argument B is invalid. Please specify a positive integer for this parameter.")
@@ -100,24 +101,28 @@ find_area = function(B = 5000, seed = 10) {
   # return rval
   return(rval)
 }
+
 #' @title Plotting of the points serving in the estimation of the area
 #'
 #' @description Plotting procedure for an object of the `area` class.
 #' @param x an object of `area` class containing the points that serve to the estimation of the area value.
+#' @param ... other parameters passed to `plot` function
 #' @return A plot of the unit square and the shape emphasising the points used in the estimation.
 #' @importFrom stats runif
 #' @importFrom graphics grid lines polygon
 #' @importFrom grDevices hcl
 #' @export
-#' @examples plot(x)
-plot.area <- function(x){
+#' @examples
+#' x <- estimate_area()
+#' plot(x)
+plot.area <- function(x, ...){
   #Control of the argument
   if(class(x) != "area"){
     stop("Specify an argument of the area class for this function. ")
   }
   points <- x[["points"]]
   B <- nrow(points)
-  plot(NA, xlim = c(-.1, 1.1), ylim = c(-.1, 1.1), xlab = "x", ylab = "y")
+  plot(NA, xlim = c(-.1, 1.1), ylim = c(-.1, 1.1), xlab = "x", ylab = "y", ...)
   make_square()
   cols = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 0.2)[1:2]
   grid()
@@ -134,7 +139,7 @@ plot.area <- function(x){
 
 For the `DESCRIPTION` file: 
 
-```{toml}
+```{r}
 Package: pkghw4gN
 Type: Package
 Title: Estimate area of the shape
@@ -144,8 +149,10 @@ Maintainer: Surname Name <XXXXXX@emailadress.com>
 Description: Functions to numerically estimate the area of the shape.
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.1.1
-Imports: shiny (>= 1.4.0)
+RoxygenNote: 7.2.1
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
 ```
 
 The other files are automatically generated and updated when using the `devtools::document()` command. 
