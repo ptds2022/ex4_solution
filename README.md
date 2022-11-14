@@ -133,7 +133,79 @@ plot.area <- function(x, ...){
 }
 ```
 
+## User interface
 
+For the `ui.R` file: 
+
+```{toml}
+library(shiny)
+shinyUI(fluidPage(
+    titlePanel("Area Estimation"),
+    sidebarLayout(
+        sidebarPanel(
+            numericInput("seed", "Enter the desired seed:", min=1, max=10^6, value=1),
+            sliderInput("B", "Enter the number of simulations", min=1, max=1000000, value=100)
+        ),
+        mainPanel(
+            plotOutput("plot"),
+            textOutput("time"),
+            textOutput("area")
+        )
+    )
+))
+```
+
+## Server
+
+For the `server.R` file: 
+
+```{toml}
+library(shiny)
+library(pkghw4gN) # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
+shinyServer(function(input, output) {
+simulate <- reactive({
+    #simulate the area of S and measure the time here
+    find_area(B = input$B, seed=input$seed)
+})
+   output$plot <- renderPlot({
+       # plot shape
+      plot(simulate())
+   })
+   output$time <- renderText({
+      #extract the time of the execution
+      options(digits.secs=6)
+      start.time <- Sys.time()
+      simulate()
+      end.time <- Sys.time()
+      time <- end.time-start.time
+      paste("Execution time is:", time)
+    })
+   output$area <- renderText({
+      # extract the estimated value
+      pival <- simulate()$estimated_area
+      paste("Estimated area is:", pival)
+    })
+})
+```
+
+## Demo
+
+For the `runDemo.R` file: 
+
+```{toml}
+#' @export
+runDemo <- function() {
+  # REPLACE N BY YOUR GROUP NUMBER AND DELETE THIS COMMENT
+  appDir <- system.file("shiny-examples", "area", package = "pkghw4gN")
+  if (appDir == "") {
+    stop(
+      "Could not find example directory. Try re-installing pkghw4gN.",
+      call. = FALSE
+    )
+  }
+  shiny::runApp(appDir, display.mode = "normal")
+}
+```
 
 ## Documentation
 
